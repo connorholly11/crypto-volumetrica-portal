@@ -7,17 +7,25 @@ Yes, the admin portal should be fully functional! You can create accounts, manag
 ## Current Functionality Status
 
 ### ✅ What Works
-1. **User Creation** - Creates users in Volumetrica
+1. **User Creation** - Creates users in Volumetrica (returns userId, username, password)
 2. **Account Creation** - Creates trading accounts with rules
 3. **Account Management** - Enable/disable accounts
 4. **Trading Rules** - Create and manage trading rules
 5. **Real-time Data** - Auto-refresh every 30 seconds
-6. **CRUD Operations** - Full Create, Read, Update, Delete
+6. **Account Listing** - View all accounts with balances
 
-### ⚠️ Limitations
+### ❌ What Doesn't Work (API Limitations)
+1. **User Profile Fetching** - Cannot retrieve user details after creation
+2. **User Updates** - Cannot modify user information
+3. **User Deletion** - No delete endpoint exists
+4. **User Listing** - Cannot get list of all users
+5. **User Search** - No search by email/name
+
+### ⚠️ Important Notes
 - Using Volumetrica staging API (not production)
 - No authentication yet (prototype phase)
-- Some features may need real account IDs to test
+- **Store user data locally** when created (Volumetrica won't return it later)
+- User details (name, email) only available at creation time
 
 ## Testing Workflow
 
@@ -39,7 +47,9 @@ Visit: http://localhost:3000
    - Email: test@example.com
    - Country: US
 5. Click "Create User"
-6. **Save the returned userId** (you'll need this!)
+6. **Save ALL returned data** (userId, username, password)
+   - ⚠️ **IMPORTANT**: You cannot fetch user details later!
+   - Store this data in your own system
 
 #### Create a Trading Account
 1. In Admin Dashboard, go to "Create Account" tab
@@ -79,9 +89,10 @@ Visit: http://localhost:3000
 
 ### 4. API Testing with cURL
 
-#### Get User Details
+#### Get User's Accounts
 ```bash
-curl http://localhost:3000/api/users/[userId]
+# Note: Cannot fetch user profile details
+curl "http://localhost:3000/api/accounts/list?userId=[userId]"
 ```
 
 #### Get Account Details
@@ -116,10 +127,13 @@ If you have access to Volumetrica's staging admin panel:
 4. Verify trading rules are applied correctly
 
 ### Using Our API Endpoints
-All our endpoints mirror Volumetrica's data:
-- `/api/accounts/[accountId]` - Real-time from Volumetrica
-- `/api/users/[userId]` - Direct from Volumetrica
+Working endpoints that mirror Volumetrica's data:
+- `/api/accounts/[accountId]` - Real-time account data
+- `/api/accounts/list` - List all accounts (with optional userId filter)
 - `/api/trading-rules/list` - Shows all rules in system
+- `/api/users/create` - Creates user (returns all user data)
+
+**Note**: No endpoint to fetch user profiles - store data when created!
 
 ## Common Test Scenarios
 
@@ -149,8 +163,9 @@ All our endpoints mirror Volumetrica's data:
 ## Troubleshooting
 
 ### "User not found" Error
-- Ensure you're using a valid userId from Volumetrica
-- Check if user was created successfully
+- This happens when trying to fetch user profile (endpoint doesn't exist)
+- Store user data locally when created
+- Use the userId for account operations only
 
 ### "Account not found" Error
 - Verify accountId exists
@@ -167,18 +182,23 @@ All our endpoints mirror Volumetrica's data:
 
 ## Data Persistence
 
-- **All data is stored in Volumetrica** (not locally)
+- **Trading data is stored in Volumetrica** (accounts, balances, rules)
+- **User profiles are NOT retrievable** from Volumetrica after creation
 - **No database** in our app (prototype phase)
-- **Real-time fetching** from Volumetrica API
-- **Changes persist** across sessions
+- **Real-time fetching** for account data only
+- **Changes persist** in Volumetrica
+- **Must store user details locally** when created
 
 ## Next Steps for Full Production
 
-1. **Authentication** - Add user login system
-2. **Webhooks** - Real-time updates from Volumetrica
-3. **Database** - Cache frequently accessed data
-4. **Audit Logs** - Track all admin actions
-5. **Production API** - Switch from staging
+1. **User Database** - Store user profiles locally (REQUIRED!)
+2. **Authentication** - Add user login system
+3. **Webhooks** - Real-time updates from Volumetrica
+4. **Caching** - Redis for frequently accessed data
+5. **Audit Logs** - Track all admin actions
+6. **Production API** - Switch from staging
+
+See `/rules-docs-agents/post-proto.md` for detailed roadmap!
 
 ## Quick Test Checklist
 
