@@ -5,6 +5,11 @@ import { VolumetricaError } from '@/lib/volumetrica/client';
 import type { 
   CreateAccountRequest, 
   CreateAccountResponse,
+  TradingRule,
+  RiskParameter
+} from '@/types/volumetrica';
+
+import {
   Currency,
   AccountMode,
   PortfolioMode,
@@ -97,11 +102,25 @@ export async function POST(request: NextRequest) {
     // Validate request body
     const validatedData = CreateAccountSchema.parse(body);
     
+    // Prepare request data - clean up empty values
+    const requestData: any = {
+      ...validatedData,
+    };
+    
+    // If using a trading rule, remove currency (it's inherited from the rule)
+    if (requestData.accountRuleId) {
+      delete requestData.currency;
+    }
+    
+    // Remove empty string values
+    if (requestData.header === '') delete requestData.header;
+    if (requestData.description === '') delete requestData.description;
+    
     // Create the account using the Volumetrica client
     const client = getVolumetricaClient();
     const response = await client.post<CreateAccountResponse>(
       '/tradingAccount',
-      validatedData as CreateAccountRequest
+      requestData
     );
     
     // Return success response
