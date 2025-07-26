@@ -1,36 +1,98 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Crypto Volumetrica Portal
 
-## Getting Started
+A professional trading portal for prop firm crypto trading management integrated with Volumetrica's platform.
 
-First, run the development server:
+## 🤖 For AI Agents
+**Start here**: [`AI_AGENT_INTRO.md`](./AI_AGENT_INTRO.md)
 
+## 📋 Documentation Structure
+
+### Planning & Architecture
+- [`PROTOTYPE_PLAN.md`](./PROTOTYPE_PLAN.md) - Complete implementation plan
+- [`QUICK_START.md`](./QUICK_START.md) - Quick setup guide
+- [`UI_COMPONENTS_GUIDE.md`](./UI_COMPONENTS_GUIDE.md) - UI component patterns
+
+### Collaboration
+- [`AI_AGENT_INTRO.md`](./AI_AGENT_INTRO.md) - Starting point for AI agents
+- [`AGENT_RULES.md`](./AGENT_RULES.md) - Collaboration guidelines
+- [`AGENT_COLLABORATION.md`](./AGENT_COLLABORATION.md) - Work tracking log
+
+### API Documentation
+- [`volumetrica/platform.md`](./volumetrica/platform.md) - Volumetrica platform API
+- [`volumetrica/trading-api.md`](./volumetrica/trading-api.md) - Trading API (reference only)
+
+## 🚀 Quick Start
+
+1. **Install dependencies**:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. **Set up environment** (already configured in `.env.local`)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. **Run development server**:
+```bash
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. **Access the portal**:
+- Home: http://localhost:3000
+- Trader Dashboard: http://localhost:3000/trader/[userId]
+- Admin Dashboard: http://localhost:3000/admin
 
-## Learn More
+## 🏗️ Project Status
 
-To learn more about Next.js, take a look at the following resources:
+Currently in **Phase 1: Setup & Core Implementation**
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+See [`AGENT_COLLABORATION.md`](./AGENT_COLLABORATION.md) for current progress and available tasks.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🛠️ Tech Stack
 
-## Deploy on Vercel
+- **Frontend**: Next.js 15.4.4 with TypeScript
+- **Styling**: Tailwind CSS + shadcn/ui
+- **API**: Next.js API Routes
+- **State Management**: React Query
+- **Forms**: React Hook Form + Zod
+- **Charts**: Recharts
+- **Tables**: TanStack Table
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 📁 Project Structure
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+crypto-vol-integration/
+├── src/
+│   ├── app/             # Next.js pages and API routes
+│   ├── components/      # React components
+│   ├── lib/            # Utilities and API client
+│   └── types/          # TypeScript definitions
+├── public/             # Static assets
+├── volumetrica/        # API documentation
+└── [documentation]     # Project docs
+```
+
+## 🔗 Key Features
+
+### Trader Dashboard
+- Real-time account balance and equity
+- P&L tracking with visual indicators
+- Drawdown monitoring with risk alerts
+- Trading rules display
+- Performance metrics and charts
+
+### Admin Dashboard  
+- Quick account creation workflow
+- User management system
+- Trading rules templates
+- Account monitoring table
+- Enable/disable accounts
+
+## 🤝 Contributing
+
+This project uses AI agents for development. See:
+- [`AI_AGENT_INTRO.md`](./AI_AGENT_INTRO.md) for getting started
+- [`AGENT_RULES.md`](./AGENT_RULES.md) for collaboration rules
+- [`AGENT_COLLABORATION.md`](./AGENT_COLLABORATION.md) for current status
+
+---
+
+Built for [Prop Firm Name] in partnership with Volumetrica
