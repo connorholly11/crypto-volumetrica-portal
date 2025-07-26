@@ -114,7 +114,7 @@ export function AccountCreationForm() {
       const response = await fetch("/api/trading-rules/templates")
       if (!response.ok) throw new Error("Failed to fetch templates")
       const data = await response.json()
-      return data.data as TradingRule[]
+      return data.data?.templates || []
     },
   })
 
@@ -559,8 +559,8 @@ export function AccountCreationForm() {
                               <div className="p-2 text-center text-sm text-muted-foreground">
                                 Loading templates...
                               </div>
-                            ) : (
-                              templates?.map((template) => (
+                            ) : templates && templates.length > 0 ? (
+                              templates.map((template) => (
                                 <SelectItem key={template.id} value={template.id!}>
                                   <div>
                                     <div className="font-medium">{template.name}</div>
@@ -570,6 +570,10 @@ export function AccountCreationForm() {
                                   </div>
                                 </SelectItem>
                               ))
+                            ) : (
+                              <div className="p-2 text-center text-sm text-muted-foreground">
+                                No templates available
+                              </div>
                             )}
                           </SelectContent>
                         </Select>
