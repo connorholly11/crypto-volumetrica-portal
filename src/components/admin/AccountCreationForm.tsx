@@ -121,16 +121,37 @@ export function AccountCreationForm() {
   // Create user mutation
   const createUserMutation = useMutation({
     mutationFn: async (userData: z.infer<typeof userSchema>) => {
+      console.log('[AccountCreation] Sending user data:', userData);
+      
       const response = await fetch("/api/users/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(userData),
       })
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || "Failed to create user")
+      
+      console.log('[AccountCreation] Response status:', response.status);
+      
+      // Get response text first to check if it's empty
+      const responseText = await response.text();
+      console.log('[AccountCreation] Response text:', responseText);
+      
+      if (!responseText) {
+        throw new Error('Empty response from server');
       }
-      return response.json()
+      
+      let responseData;
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (e) {
+        console.error('[AccountCreation] Failed to parse response:', e);
+        throw new Error('Invalid JSON response from server');
+      }
+      
+      if (!response.ok) {
+        throw new Error(responseData.message || "Failed to create user")
+      }
+      
+      return responseData;
     },
   })
 
@@ -167,10 +188,13 @@ export function AccountCreationForm() {
   })
 
   const onSubmit = async (values: FormData) => {
+    console.log('[AccountCreation] Form submitted:', values);
+    
     try {
       setIsCreating(true)
 
       // Step 1: Create user
+      console.log('[AccountCreation] Creating user with data:', values.user);
       const userResponse = await createUserMutation.mutateAsync(values.user)
       const userId = userResponse.data.userId
 

@@ -22,12 +22,29 @@ const createUserSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  console.log('[User Create] Request received');
+  
   try {
     // Parse request body
-    const body = await request.json();
+    let body;
+    try {
+      const contentType = request.headers.get('content-type');
+      console.log('[User Create] Content-Type:', contentType);
+      
+      body = await request.json();
+      console.log('[User Create] Request body:', JSON.stringify(body, null, 2));
+    } catch (parseError: any) {
+      console.error('[User Create] Failed to parse JSON:', parseError);
+      return NextResponse.json({
+        success: false,
+        message: 'Invalid JSON in request body',
+        details: [parseError.message]
+      }, { status: 400 });
+    }
     
     // Validate input
     const validatedData = createUserSchema.parse(body);
+    console.log('[User Create] Validation passed');
     
     // Create the user request object
     const createUserRequest: CreateUserRequest = {
@@ -43,8 +60,14 @@ export async function POST(request: NextRequest) {
       externalId: validatedData.externalId,
     };
     
+    // Log environment check
+    console.log('[User Create] API URL:', process.env.VOLUMETRICA_API_URL);
+    console.log('[User Create] Has API Key:', !!process.env.VOLUMETRICA_API_KEY);
+    
     // Call Volumetrica API to create user
+    console.log('[User Create] Calling Volumetrica API with:', createUserRequest);
     const result = await volumetricaApi.users.create(createUserRequest) as CreateUserResponse;
+    console.log('[User Create] Volumetrica API response:', result);
     
     // Return successful response
     return NextResponse.json({
@@ -53,9 +76,14 @@ export async function POST(request: NextRequest) {
       message: 'User created successfully'
     }, { status: 201 });
     
-  } catch (error) {
+  } catch (error: any) {
+    console.error('[User Create] Error caught:', error);
+    console.error('[User Create] Error type:', error?.constructor?.name);
+    console.error('[User Create] Error message:', error?.message);
+    
     // Handle validation errors
     if (error instanceof z.ZodError) {
+      console.log('[User Create] Zod validation error');
       return NextResponse.json({
         success: false,
         message: 'Validation error',
@@ -68,6 +96,7 @@ export async function POST(request: NextRequest) {
     
     // Handle Volumetrica API errors
     if (error instanceof VolumetricaError) {
+      console.log('[User Create] Volumetrica API error');
       return NextResponse.json({
         success: false,
         message: error.message,
@@ -75,11 +104,23 @@ export async function POST(request: NextRequest) {
       }, { status: error.statusCode || 500 });
     }
     
-    // Handle unexpected errors
-    console.error('Unexpected error creating user:', error);
+    // Handle other errors with error details
+    console.error('[User Create] Unexpected error:', error);
+    const errorMessage = error?.message || 'An unexpected error occurred';
+    const errorDetails = [];
+    
+    // Add more error context
+    if (error?.response?.data) {
+      errorDetails.push(`API Response: ${JSON.stringify(error.response.data)}`);
+    }
+    if (error?.stack) {
+      console.error('[User Create] Stack trace:', error.stack);
+    }
+    
     return NextResponse.json({
       success: false,
-      message: 'An unexpected error occurred while creating the user'
+      message: errorMessage,
+      details: errorDetails.length > 0 ? errorDetails : ['An unexpected error occurred while creating the user']
     }, { status: 500 });
   }
 }
