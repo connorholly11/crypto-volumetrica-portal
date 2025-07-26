@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getVolumetricaClient } from '@/lib/volumetrica/client';
 import { VolumetricaError } from '@/lib/volumetrica/client';
-import type { TradingAccount, AccountStatus } from '@/types/volumetrica';
+import { TradingAccount, AccountStatus } from '@/types/volumetrica';
 
 // Validation schema for query parameters
 const ListAccountsSchema = z.object({
