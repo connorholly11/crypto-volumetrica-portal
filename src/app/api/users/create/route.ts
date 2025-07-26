@@ -10,8 +10,14 @@ const createUserSchema = z.object({
   firstName: z.string().min(1, 'First name is required').max(50, 'First name too long'),
   lastName: z.string().min(1, 'Last name is required').max(50, 'Last name too long'),
   country: z.string().length(2, 'Country must be a 2-letter code').toUpperCase(),
-  state: z.string().length(2, 'State must be a 2-letter code').toUpperCase().optional(),
-  phone: z.string().regex(/^\+?[1-9]\d{1,14}$/, 'Invalid phone number format').optional(),
+  state: z.union([
+    z.string().length(2, 'State must be a 2-letter code').toUpperCase(),
+    z.literal('')
+  ]).optional(),
+  phone: z.union([
+    z.string().regex(/^\+?[1-9]\d{1,14}$/, 'Invalid phone number format'),
+    z.literal('')
+  ]).optional(),
   password: z.string().min(8, 'Password must be at least 8 characters').optional(),
   encryptionMode: z.nativeEnum({
     None: 0,
@@ -46,18 +52,18 @@ export async function POST(request: NextRequest) {
     const validatedData = createUserSchema.parse(body);
     console.log('[User Create] Validation passed');
     
-    // Create the user request object
+    // Create the user request object (filter out empty strings)
     const createUserRequest: CreateUserRequest = {
       email: validatedData.email,
       firstName: validatedData.firstName,
       lastName: validatedData.lastName,
       country: validatedData.country,
-      state: validatedData.state,
-      phone: validatedData.phone,
-      password: validatedData.password,
-      encryptionMode: validatedData.encryptionMode,
-      forceNewPassword: validatedData.forceNewPassword,
-      externalId: validatedData.externalId,
+      ...(validatedData.state && validatedData.state !== '' ? { state: validatedData.state } : {}),
+      ...(validatedData.phone && validatedData.phone !== '' ? { phone: validatedData.phone } : {}),
+      ...(validatedData.password ? { password: validatedData.password } : {}),
+      ...(validatedData.encryptionMode !== undefined ? { encryptionMode: validatedData.encryptionMode } : {}),
+      ...(validatedData.forceNewPassword !== undefined ? { forceNewPassword: validatedData.forceNewPassword } : {}),
+      ...(validatedData.externalId ? { externalId: validatedData.externalId } : {}),
     };
     
     // Log environment check
