@@ -5,10 +5,24 @@
 
 ## 🚨 Critical Information
 
-### There is NO GET /user/{userId} endpoint!
-- **This endpoint does not exist** in any Volumetrica API
-- Store user data when created - don't try to fetch it later
-- Use `GetUserAccounts` to get a user's trading accounts
+### Missing User Management Endpoints
+The following endpoints **DO NOT EXIST** in Volumetrica:
+- ❌ **GET /user/{userId}** - No user profile fetching
+- ❌ **PUT /user/{userId}** - No user updates
+- ❌ **DELETE /user/{userId}** - No user deletion
+- ❌ **GET /users** - No user listing
+- ❌ **User search/filter** - No user search functionality
+
+### Why? Volumetrica's Design Philosophy
+Volumetrica expects prop firms to:
+1. **Maintain their own user database** for profiles (name, email, etc.)
+2. **Only use Volumetrica for trading data** (accounts, balances, P&L)
+3. **Store the userId mapping** to link your users to their system
+
+From their documentation:
+> "userId: it must be stored on the propfirm's DB because it is necessary for the next calls"
+
+**Their Model**: They handle trading infrastructure, you handle user management.
 
 ## 📊 API Overview
 
@@ -294,6 +308,30 @@ curl http://localhost:3000/api/test
 3. **Use the test suite** to verify endpoints
 4. **Check `/volumetrica/platform.md`** for detailed field descriptions
 5. **Store critical data locally** when received from creation endpoints
+
+## 📊 Data Availability Summary
+
+### ✅ What You CAN Get from Volumetrica
+- **At User Creation**: userId, username, password
+- **Trading Accounts**: Full account data, real-time balances
+- **Account History**: Trades, orders, P&L reports
+- **Trading Rules**: All risk parameters and templates
+- **User's Accounts**: List of accounts for a userId
+- **Real-time Updates**: Via polling or webhooks
+
+### ❌ What You CANNOT Get from Volumetrica
+- **User Profiles**: No way to fetch name, email after creation
+- **User Updates**: Cannot modify user information
+- **User Search**: No search by email or name
+- **User Listing**: No endpoint to list all users
+- **User Deletion**: No way to delete users
+
+### 💡 The Solution
+For production, implement a local database to store:
+- User profiles (name, email, etc.)
+- Volumetrica userId mapping
+- Any custom user fields
+- Search and filtering capabilities
 
 ## 📞 Support
 
