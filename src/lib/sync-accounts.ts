@@ -9,6 +9,9 @@ import type {
 } from '@/types/volumetrica';
 import { Prisma } from '@/generated/prisma';
 
+// In-memory lock map to prevent concurrent syncs for the same user
+const syncLocks = new Map<string, Promise<void>>();
+
 /**
  * Maps Volumetrica account data to Prisma schema format
  */
@@ -29,13 +32,10 @@ function mapVolumetricaAccountToPrisma(account: TradingAccount): Prisma.AccountC
 }
 
 /**
- * Synchronizes user accounts from Volumetrica API to the database
- * 
- * @param volumetricaUserId - The Volumetrica user ID to sync accounts for
- * @returns Promise that resolves when sync is complete
- * @throws VolumetricaError if API call fails
+ * Internal function that performs the actual sync operation
+ * This is separated to allow for proper locking mechanism
  */
-export async function syncUserAccounts(volumetricaUserId: string): Promise<void> {
+async function performSync(volumetricaUserId: string): Promise<void> {
   try {
     logger.info(`Starting account sync for user: ${volumetricaUserId}`);
 
@@ -87,6 +87,35 @@ export async function syncUserAccounts(volumetricaUserId: string): Promise<void>
 
     logger.error(`Unexpected error during sync for user ${volumetricaUserId}:`, error);
     throw new Error(`Failed to sync accounts: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+/**
+ * Synchronizes user accounts from Volumetrica API to the database
+ * Uses a locking mechanism to prevent concurrent syncs for the same user
+ * 
+ * @param volumetricaUserId - The Volumetrica user ID to sync accounts for
+ * @returns Promise that resolves when sync is complete
+ * @throws VolumetricaError if API call fails
+ */
+export async function syncUserAccounts(volumetricaUserId: string): Promise<void> {
+  // Check if there's already a sync in progress for this user
+  const existingSync = syncLocks.get(volumetricaUserId);
+  if (existingSync) {
+    logger.info(`Sync already in progress for user ${volumetricaUserId}, waiting for it to complete`);
+    return existingSync;
+  }
+
+  // Create a new sync promise and store it in the lock map
+  const syncPromise = performSync(volumetricaUserId);
+  syncLocks.set(volumetricaUserId, syncPromise);
+
+  try {
+    // Wait for the sync to complete
+    await syncPromise;
+  } finally {
+    // Always remove the lock when done, whether successful or not
+    syncLocks.delete(volumetricaUserId);
   }
 }
 
