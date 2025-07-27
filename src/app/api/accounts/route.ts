@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { syncUserAccounts, needsSync } from '@/lib/sync-accounts';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { logger } from '@/lib/volumetrica/client-logger';
 
 /**
@@ -10,8 +11,17 @@ import { logger } from '@/lib/volumetrica/client-logger';
  * Returns the current user's trading accounts from the database cache.
  * If the cache is stale (>5 minutes), triggers a sync from Volumetrica.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // Check rate limit first
+    const { success, headers } = await checkRateLimit(request);
+    if (!success) {
+      return new NextResponse('Too Many Requests', { 
+        status: 429,
+        headers 
+      });
+    }
+    
     // 1. Require authentication and get Clerk user ID
     const clerkUserId = requireAuth();
     
@@ -88,7 +98,7 @@ export async function GET() {
         lastSync: accounts[0]?.lastSync?.toISOString() || null,
         cacheStatus: shouldSync ? 'refreshed' : 'cached',
       },
-    });
+    }, { headers });
 
   } catch (error) {
     logger.error('Error in GET /api/accounts:', error);

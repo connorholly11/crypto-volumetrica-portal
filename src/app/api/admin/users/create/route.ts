@@ -3,6 +3,7 @@ import { clerkClient } from '@clerk/nextjs/server';
 import { volumetricaApi, VolumetricaError } from '@/lib/volumetrica/client';
 import { prisma } from '@/lib/prisma';
 import { requireAdmin } from '@/lib/auth';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { z } from 'zod';
 import crypto from 'crypto';
 
@@ -37,6 +38,16 @@ export async function POST(request: NextRequest) {
   console.log('[Admin User Create] Request received');
   
   try {
+    // Check rate limit first
+    const { success, headers } = await checkRateLimit(request);
+    if (!success) {
+      console.log('[Admin User Create] Rate limit exceeded');
+      return new NextResponse('Too Many Requests', { 
+        status: 429,
+        headers 
+      });
+    }
+    
     // Check admin authorization
     await requireAdmin();
     console.log('[Admin User Create] Admin authorization verified');
@@ -120,7 +131,7 @@ export async function POST(request: NextRequest) {
         },
       });
       
-      // Return successful response
+      // Return successful response with rate limit headers
       return NextResponse.json({
         success: true,
         data: {
@@ -133,7 +144,10 @@ export async function POST(request: NextRequest) {
           tempPassword, // Return temporary password for admin to share with user
         },
         message: 'User created successfully in all systems'
-      }, { status: 201 });
+      }, { 
+        status: 201,
+        headers 
+      });
       
     } catch (error: any) {
       console.error('[Admin User Create] Error during creation:', error);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getVolumetricaClient } from '@/lib/volumetrica/client';
 import { VolumetricaError } from '@/lib/volumetrica/client';
+import { checkRateLimit } from '@/lib/rate-limit';
 import type { 
   CreateAccountRequest, 
   CreateAccountResponse,
@@ -98,6 +99,15 @@ export async function POST(request: NextRequest) {
   console.log('[Account Create] Request received');
   
   try {
+    // Check rate limit first
+    const { success, headers } = await checkRateLimit(request);
+    if (!success) {
+      return new NextResponse('Too Many Requests', { 
+        status: 429,
+        headers 
+      });
+    }
+    
     // Parse request body
     const body = await request.json();
     console.log('[Account Create] Request body:', JSON.stringify(body, null, 2));
@@ -134,7 +144,10 @@ export async function POST(request: NextRequest) {
       success: true,
       data: response,
       message: 'Trading account created successfully'
-    }, { status: 201 });
+    }, { 
+      status: 201,
+      headers 
+    });
     
   } catch (error) {
     console.error('[Account Create] Error:', error);
