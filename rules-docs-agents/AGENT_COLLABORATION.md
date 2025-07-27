@@ -7,7 +7,7 @@ This file tracks what each agent is working on to prevent conflicts and ensure s
 
 ## Project Status Overview
 - **Phase**: Planning & Setup
-- **Ready to Start**: Phase 1 Implementation
+- **Ready to Start**: Phase 1 Implementation (see `/rules-docs-agents/phase1-implementation.md` for detailed plan)
 - **Blockers**: None
 
 ---

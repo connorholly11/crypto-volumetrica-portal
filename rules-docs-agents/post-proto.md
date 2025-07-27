@@ -183,35 +183,32 @@ Based on documentation analysis, Volumetrica expects:
 
 ### Architecture Decision Points
 
-#### 1. **Monolithic vs Microservices**
-**Current**: Monolithic Next.js app with API routes
-**Pros**: 
-- Simple deployment
+#### 1. **Architecture Approach**
+**Decision**: Monolithic Next.js app with API routes
+**Benefits**: 
+- Simple deployment on Vercel
 - Shared types/validation
 - Easy development
-**Cons**: 
-- Scaling limitations
-- Coupled frontend/backend
-**Recommendation**: Stay monolithic until 10k+ users
+- Lower operational overhead
+**Future**: Consider microservices only after 10k+ users
 
-#### 2. **Database Choice**
-**Options Considered**:
-- **SQLite**: Good for prototype, bad for production
-- **PostgreSQL (Supabase)**: Recommended ✓
-  - Built-in auth
-  - Row Level Security
+#### 2. **Database Decision**
+**Selected**: PostgreSQL via Supabase (EU region)
+**Benefits**:
+  - Row Level Security (RLS)
   - Realtime subscriptions
   - Generous free tier
-- **MongoDB**: Overkill for relational data
-- **MySQL**: No advantages over PostgreSQL
+  - Built-in backups
+  - Easy migration to self-hosted if needed
+**Multi-region strategy**: Consider read replicas for India/Canada/US in Phase 5+
 
 #### 3. **Authentication Strategy**
 **Challenge**: Volumetrica provides credentials but no auth endpoint
-**Solution**: Build our own auth layer
-- Store Volumetrica userId mapping
-- Use NextAuth.js for session management
-- Hash passwords separately from Volumetrica
-- Support password reset flow
+**Solution**: Clerk authentication with Volumetrica mapping
+- Store Volumetrica userId mapping in Supabase
+- Use Clerk for all auth flows (login, MFA, password reset)
+- Never store Volumetrica passwords
+- Generate one-time SSO links for trading platform access
 
 #### 4. **Data Synchronization**
 **Problem**: Need to keep local cache in sync with Volumetrica
@@ -362,11 +359,11 @@ Instead of Next.js API routes:
 - Pros: Better separation, easier scaling
 - Cons: More complexity, deployment overhead
 
-### 3. **Different Auth Approach**
-Instead of NextAuth.js:
-- Clerk or Auth0
-- Pros: Managed service, less code
-- Cons: Additional cost, less control
+### 3. **Alternative Database**
+Instead of Supabase:
+- Self-hosted PostgreSQL on AWS RDS
+- Pros: More control, potentially cheaper at scale
+- Cons: More maintenance, no built-in RLS
 
 ### 4. **GraphQL Instead of REST**
 - Pros: Better data fetching, type safety
@@ -803,7 +800,7 @@ Total to Full Features: 10 weeks
 - Mobile applications
 - Advanced RBAC (just admin/trader for now)
 - KYC/AML integration
-- Billing/payments (Stripe)
+- Payment Integration (Authorize.net) - for account funding, subscription fees, and performance payouts
 - White-label support
 - Partner API
 - Advanced compliance (SOC2, etc)
@@ -850,19 +847,23 @@ Track these KPIs:
 
 **Ready to execute this plan? Let's start Phase 0 immediately.**
 
-## 📝 Decision Points
+## 📝 Key Technical Decisions (Locked In)
 
-### Immediate Decision Required:
-**Q: How to handle user data storage?**
+### Database: Supabase PostgreSQL (EU Region)
+- Built-in RLS for security
+- Generous free tier
+- Easy migration path
+- Type safety with Prisma ORM
 
-**Recommendation**: Start with SQLite + Prisma for MVP, migrate to PostgreSQL for production. This gives you:
-- Quick setup
-- Easy development
-- Clear migration path
-- Type safety with Prisma
+### Authentication: Clerk
+- Handles all auth flows
+- Free for 3K MAU
+- Built-in MFA support
+- Seamless integration with Next.js
 
-### Architecture Decision:
-**Q: Monolith or Microservices?**
-
-**Recommendation**: Stay monolithic until 10,000+ users. Next.js can handle it, and it's easier to maintain.
+### Architecture: Monolithic Next.js
+- Single deployment
+- Shared types
+- Easier to maintain
+- Scale vertically until 10K+ users
 
