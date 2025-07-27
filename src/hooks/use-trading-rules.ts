@@ -34,7 +34,10 @@ interface TradingRuleTemplate {
 
 interface TradingRuleTemplatesResponse {
   success: boolean
-  data?: TradingRuleTemplate[]
+  data?: {
+    templates: TradingRuleTemplate[]
+    totalCount: number
+  }
   message?: string
 }
 
@@ -113,7 +116,7 @@ export function useTradingRuleTemplates(
         throw new Error(data.message || 'Failed to fetch trading rule templates')
       }
       
-      return data.data!
+      return data.data?.templates || []
     },
     staleTime: 5 * 60 * 1000, // Templates don't change often, cache for 5 minutes
     ...options,

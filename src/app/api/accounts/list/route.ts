@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getVolumetricaClient } from '@/lib/volumetrica/client';
 import { VolumetricaError } from '@/lib/volumetrica/client';
-import type { TradingAccount, AccountStatus } from '@/types/volumetrica';
+import { TradingAccount, AccountStatus } from '@/types/volumetrica';
 
 // Validation schema for query parameters
 const ListAccountsSchema = z.object({
@@ -15,6 +15,8 @@ const ListAccountsSchema = z.object({
 });
 
 export async function GET(request: NextRequest) {
+  console.log('[Accounts List] Request received');
+  
   try {
     // Parse query parameters
     const searchParams = request.nextUrl.searchParams;
@@ -48,18 +50,63 @@ export async function GET(request: NextRequest) {
     
     // Get accounts list using the Volumetrica client
     const client = getVolumetricaClient();
-    const response = await client.get<{
-      items: TradingAccount[];
-      totalCount: number;
-      page: number;
-      pageSize: number;
-      totalPages: number;
-    }>('/tradingAccount', { params: apiParams });
+    
+    // Try to get accounts, handle 404 as empty list
+    let response;
+    try {
+      console.log('[Accounts List] Calling Volumetrica with params:', apiParams);
+      response = await client.get<any>('/tradingAccount', { params: apiParams });
+      console.log('[Accounts List] Response received:', response);
+    } catch (error: any) {
+      console.log('[Accounts List] Error caught:', error.statusCode, error.message);
+      // If 404, return empty list (no accounts yet)
+      if (error.statusCode === 404) {
+        console.log('[Accounts List] Handling 404 as empty list');
+        response = {
+          accounts: [],
+          totalCount: 0,
+          page: validatedParams.page,
+          pageSize: validatedParams.pageSize,
+          totalPages: 0
+        };
+      } else {
+        throw error;
+      }
+    }
+    
+    // Handle different response formats from Volumetrica
+    let accounts: TradingAccount[] = [];
+    let totalCount = 0;
+    
+    if (Array.isArray(response)) {
+      // Response is array of accounts
+      accounts = response;
+      totalCount = accounts.length;
+    } else if (response.accounts) {
+      // Response has accounts property
+      accounts = response.accounts;
+      totalCount = response.totalCount || accounts.length;
+    } else if (response.items) {
+      // Response has items property
+      accounts = response.items;
+      totalCount = response.totalCount || accounts.length;
+    } else if (response.data) {
+      // Response has data property
+      if (Array.isArray(response.data)) {
+        accounts = response.data;
+        totalCount = accounts.length;
+      } else if (response.data.accounts) {
+        accounts = response.data.accounts;
+        totalCount = response.data.totalCount || accounts.length;
+      }
+    }
+    
+    const totalPages = Math.ceil(totalCount / validatedParams.pageSize);
+    const currentPage = validatedParams.page;
     
     // Calculate summary statistics
-    const accounts = response.items || [];
     const summaryStats = {
-      totalAccounts: response.totalCount,
+      totalAccounts: totalCount,
       activeAccounts: accounts.filter(a => a.status === AccountStatus.Enabled).length,
       totalEquity: accounts.reduce((sum, a) => sum + a.equity, 0),
       totalBalance: accounts.reduce((sum, a) => sum + a.balance, 0),
@@ -98,12 +145,12 @@ export async function GET(request: NextRequest) {
           reason: account.reason
         })),
         pagination: {
-          totalCount: response.totalCount,
-          page: response.page,
-          pageSize: response.pageSize,
-          totalPages: response.totalPages,
-          hasNextPage: response.page < response.totalPages,
-          hasPreviousPage: response.page > 1,
+          totalCount: totalCount,
+          page: currentPage,
+          pageSize: validatedParams.pageSize,
+          totalPages: totalPages,
+          hasNextPage: currentPage < totalPages,
+          hasPreviousPage: currentPage > 1,
         },
         summary: summaryStats
       },

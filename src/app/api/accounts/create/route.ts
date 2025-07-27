@@ -5,6 +5,11 @@ import { VolumetricaError } from '@/lib/volumetrica/client';
 import type { 
   CreateAccountRequest, 
   CreateAccountResponse,
+  TradingRule,
+  RiskParameter
+} from '@/types/volumetrica';
+
+import {
   Currency,
   AccountMode,
   PortfolioMode,
@@ -90,18 +95,38 @@ const CreateAccountSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  console.log('[Account Create] Request received');
+  
   try {
     // Parse request body
     const body = await request.json();
+    console.log('[Account Create] Request body:', JSON.stringify(body, null, 2));
     
     // Validate request body
     const validatedData = CreateAccountSchema.parse(body);
+    console.log('[Account Create] Validation passed');
+    
+    // Prepare request data - clean up empty values
+    const requestData: any = {
+      ...validatedData,
+    };
+    
+    // If using a trading rule, remove currency (it's inherited from the rule)
+    if (requestData.accountRuleId) {
+      delete requestData.currency;
+    }
+    
+    // Remove empty string values
+    if (requestData.header === '') delete requestData.header;
+    if (requestData.description === '') delete requestData.description;
+    
+    console.log('[Account Create] Sending to Volumetrica:', JSON.stringify(requestData, null, 2));
     
     // Create the account using the Volumetrica client
     const client = getVolumetricaClient();
     const response = await client.post<CreateAccountResponse>(
       '/tradingAccount',
-      validatedData as CreateAccountRequest
+      requestData
     );
     
     // Return success response
@@ -112,17 +137,21 @@ export async function POST(request: NextRequest) {
     }, { status: 201 });
     
   } catch (error) {
+    console.error('[Account Create] Error:', error);
+    
     // Handle validation errors
     if (error instanceof z.ZodError) {
+      console.log('[Account Create] Validation error:', error.issues);
       return NextResponse.json({
         success: false,
         message: 'Validation error',
-        details: error.errors.map(e => `${e.path.join('.')}: ${e.message}`)
+        details: error.issues.map((e) => `${e.path.join('.')}: ${e.message}`)
       }, { status: 400 });
     }
     
     // Handle Volumetrica API errors
     if (error instanceof VolumetricaError) {
+      console.log('[Account Create] Volumetrica error:', error.message, error.details);
       return NextResponse.json({
         success: false,
         message: error.message,

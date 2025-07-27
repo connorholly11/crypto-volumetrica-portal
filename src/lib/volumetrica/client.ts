@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios';
 import type { VolumetricaResponse } from '@/types/volumetrica';
+import { logger } from './client-logger';
 
 // Custom error class for Volumetrica API errors
 export class VolumetricaError extends Error {
@@ -121,24 +122,33 @@ export class VolumetricaClient {
 
   // Generic request method with retry logic
   private async request<T>(config: AxiosRequestConfig): Promise<T> {
+    logger.request(config.method || 'GET', config.url || '', config.data);
+    
     return this.retryWithBackoff(async () => {
-      const response = await this.client.request<VolumetricaResponse<T>>(config);
-      
-      // Handle successful response with wrapper
-      if (response.data.success && response.data.data !== undefined) {
-        return response.data.data;
-      }
+      try {
+        const response = await this.client.request<VolumetricaResponse<T>>(config);
+        
+        logger.response(config.url || '', response.status, response.data);
+        
+        // Handle successful response with wrapper
+        if (response.data.success && response.data.data !== undefined) {
+          return response.data.data;
+        }
 
-      // Handle successful response without data (e.g., DELETE requests)
-      if (response.data.success) {
-        return {} as T;
-      }
+        // Handle successful response without data (e.g., DELETE requests)
+        if (response.data.success) {
+          return {} as T;
+        }
 
-      // This shouldn't happen if the API is consistent, but handle it just in case
-      throw new VolumetricaError(
-        response.data.message || 'Unexpected response format',
-        response.data.statusCode
-      );
+        // This shouldn't happen if the API is consistent, but handle it just in case
+        throw new VolumetricaError(
+          response.data.message || 'Unexpected response format',
+          response.data.statusCode
+        );
+      } catch (error) {
+        logger.error(`Request failed: ${config.url}`, error);
+        throw error;
+      }
     });
   }
 

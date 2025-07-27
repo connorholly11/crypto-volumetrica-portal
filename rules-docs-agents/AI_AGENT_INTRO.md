@@ -13,7 +13,8 @@ We're building a **crypto trading portal** for a prop firm that integrates with 
 ### 1. Start Here - Understand the System
 - 📋 **`AGENT_RULES.md`** - How we collaborate (READ THIS FIRST!)
 - 📝 **`AGENT_COLLABORATION.md`** - Current work status and TODO list
-- 🎯 **`PROTOTYPE_PLAN.md`** - Complete implementation plan
+- 🎯 **`post-proto.md`** - Complete production roadmap
+- 📊 **`phase1-implementation.md`** - Current phase: Auth & Database setup
 
 ### 2. Technical References
 - 🚀 **`QUICK_START.md`** - Setup instructions and dependencies
@@ -114,11 +115,11 @@ crypto-vol-integration/
 
 ## 💡 Key Decisions Already Made
 
-1. **No Backend** - Using Next.js API routes only
-2. **No Database** - All data from Volumetrica (for prototype)
-3. **No Auth** - Adding later (prototype first)
-4. **shadcn/ui** - For all UI components
-5. **Polling** - Refresh data every 30 seconds (no websockets yet)
+1. **Backend** - Next.js API routes (monolithic architecture)
+2. **Database** - Supabase PostgreSQL with Prisma ORM (see `/rules-docs-agents/post-proto.md`)
+3. **Auth** - Clerk for authentication (see `/rules-docs-agents/phase1-implementation.md`)
+4. **UI** - shadcn/ui components with Tailwind CSS
+5. **Data Sync** - 5-minute cache with on-demand refresh (see phase1 plan)
 
 ## 🔍 Where to Find Examples
 

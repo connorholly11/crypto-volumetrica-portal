@@ -138,12 +138,23 @@ export function UserManagement() {
   // Create user mutation
   const createUserMutation = useMutation({
     mutationFn: async (data: CreateUserFormData) => {
+      // Clean empty strings before sending
+      const cleanedData = {
+        ...data,
+        state: data.state?.trim() || undefined,
+        phone: data.phone?.trim() || undefined,
+      }
+      
       const response = await fetch("/api/users/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify(cleanedData),
       })
-      if (!response.ok) throw new Error("Failed to create user")
+      
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.message || "Failed to create user")
+      }
       return response.json()
     },
     onSuccess: (data) => {
