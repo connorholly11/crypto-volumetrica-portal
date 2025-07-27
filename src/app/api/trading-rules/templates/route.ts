@@ -23,7 +23,7 @@ const tradingRuleTemplates: TradingRule[] = [
     },
     runup: {
       enabled: true,
-      action: RiskAction.ChallengeSuccess,
+      action: RiskAction.None,
       percentage: 10,
       selection: RiskValueSelection.Percentage,
       anchor: RiskAnchor.Balance,
@@ -60,7 +60,7 @@ const tradingRuleTemplates: TradingRule[] = [
     },
     runup: {
       enabled: true,
-      action: RiskAction.ChallengeSuccess,
+      action: RiskAction.None,
       percentage: 8,
       selection: RiskValueSelection.Percentage,
       anchor: RiskAnchor.Balance,
@@ -104,7 +104,7 @@ const tradingRuleTemplates: TradingRule[] = [
     },
     runup: {
       enabled: true,
-      action: RiskAction.ChallengeSuccess,
+      action: RiskAction.None,
       percentage: 10,
       selection: RiskValueSelection.Percentage,
       anchor: RiskAnchor.Balance,
@@ -148,7 +148,7 @@ const tradingRuleTemplates: TradingRule[] = [
     },
     runup: {
       enabled: true,
-      action: RiskAction.ChallengeSuccess,
+      action: RiskAction.None,
       percentage: 6,
       selection: RiskValueSelection.Percentage,
       anchor: RiskAnchor.Balance,
@@ -185,7 +185,7 @@ const tradingRuleTemplates: TradingRule[] = [
     },
     runup: {
       enabled: true,
-      action: RiskAction.ChallengeSuccess,
+      action: RiskAction.None,
       percentage: 15,
       selection: RiskValueSelection.Percentage,
       anchor: RiskAnchor.Balance,

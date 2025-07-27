@@ -1,6 +1,7 @@
+ 
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
@@ -29,6 +30,10 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { AlertCircle } from "lucide-react"
+import { countries } from "@/lib/data/countries"
+import { usStates } from "@/lib/data/us-states"
 
 import {
   Currency,
@@ -36,18 +41,35 @@ import {
   PortfolioMode,
   ExpirationMode,
   type TradingRule,
-  type User,
 } from "@/types/volumetrica"
 
 // Form schemas for each step
 const userSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
+  firstName: z.string().min(1, "First name is required").max(50, "First name too long"),
+  lastName: z.string().min(1, "Last name is required").max(50, "Last name too long"),
   email: z.string().email("Invalid email address"),
-  country: z.string().min(2, "Country is required"),
-  state: z.string().optional(),
-  phone: z.string().optional(),
-})
+  country: z.string().length(2, "Please select a country"),
+  state: z.union([
+    z.string().length(2),
+    z.literal("")
+  ]).optional(),
+  phone: z.union([
+    z.string().regex(/^\+?[1-9]\d{1,14}$/, "Invalid phone number format (e.g., +1234567890)"),
+    z.literal("")
+  ]).optional(),
+}).refine(
+  (data) => {
+    // State is required for US
+    if (data.country === "US" && (!data.state || data.state === "")) {
+      return false;
+    }
+    return true;
+  },
+  {
+    message: "State is required for United States",
+    path: ["state"],
+  }
+)
 
 const accountSchema = z.object({
   balance: z.number().min(1000, "Minimum balance is $1,000"),
@@ -60,11 +82,20 @@ const accountSchema = z.object({
   expirationDays: z.number().optional(),
 })
 
-const tradingRulesSchema = z.object({
-  ruleType: z.enum(["template", "custom"]),
-  templateId: z.string().optional(),
-  customRule: z.any().optional(), // We'll validate this separately
-})
+// NEW: discriminated union guarantees required data
+const tradingRulesSchema = z.discriminatedUnion("ruleType", [
+  z.object({
+    ruleType: z.literal("template"),
+    templateId: z.string().min(1, "Please select a trading rule template"),
+  }),
+  z.object({
+    ruleType: z.literal("custom"),
+    customRule: z.any().refine(
+      (val) => val && typeof val === "object" && Object.keys(val).length > 0,
+      { message: "Custom trading rule is required" }
+    ),
+  }),
+])
 
 // Combined form schema
 const formSchema = z.object({
@@ -78,6 +109,7 @@ type FormData = z.infer<typeof formSchema>
 export function AccountCreationForm() {
   const [currentStep, setCurrentStep] = useState("user")
   const [isCreating, setIsCreating] = useState(false)
+  const [userCreationError, setUserCreationError] = useState<string | null>(null)
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -107,6 +139,16 @@ export function AccountCreationForm() {
     },
   })
 
+  // Clear state when country changes (if not US)
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === "user.country" && value.user?.country !== "US") {
+        form.setValue("user.state", "");
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
+
   // Fetch trading rule templates
   const { data: templates, isLoading: templatesLoading } = useQuery({
     queryKey: ["trading-rule-templates"],
@@ -121,37 +163,23 @@ export function AccountCreationForm() {
   // Create user mutation
   const createUserMutation = useMutation({
     mutationFn: async (userData: z.infer<typeof userSchema>) => {
-      console.log('[AccountCreation] Sending user data:', userData);
-      
       const response = await fetch("/api/users/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(userData),
       })
-      
-      console.log('[AccountCreation] Response status:', response.status);
-      
-      // Get response text first to check if it's empty
-      const responseText = await response.text();
-      console.log('[AccountCreation] Response text:', responseText);
-      
-      if (!responseText) {
-        throw new Error('Empty response from server');
-      }
-      
-      let responseData;
-      try {
-        responseData = JSON.parse(responseText);
-      } catch (e) {
-        console.error('[AccountCreation] Failed to parse response:', e);
-        throw new Error('Invalid JSON response from server');
-      }
-      
       if (!response.ok) {
-        throw new Error(responseData.message || "Failed to create user")
+        const error = await response.json()
+        // Extract validation errors if present
+        if (error.errors && Array.isArray(error.errors)) {
+          const errorMessages = error.errors.map((e: any) => 
+            `${e.field}: ${e.message}`
+          ).join(", ");
+          throw new Error(errorMessages);
+        }
+        throw new Error(error.message || "Failed to create user")
       }
-      
-      return responseData;
+      return response.json()
     },
   })
 
@@ -167,9 +195,20 @@ export function AccountCreationForm() {
         ...data.accountData,
       }
 
-      // Add trading rules based on selection
+      // Attach trading rule based on selection
       if (data.tradingRules.ruleType === "template" && data.tradingRules.templateId) {
-        body.accountRuleId = data.tradingRules.templateId
+        // Find full template details from the cached query result
+        const selectedTemplate = templates?.find(
+          (t: TradingRule) => t.id === data.tradingRules.templateId
+        )
+
+        if (!selectedTemplate) {
+          throw new Error("Selected trading rule template not found")
+        }
+
+        // Remove internal id before sending to Volumetrica
+        const { id, ...customRule } = selectedTemplate as Record<string, unknown>
+        body.accountCustomRule = customRule
       } else if (data.tradingRules.ruleType === "custom" && data.tradingRules.customRule) {
         body.accountCustomRule = data.tradingRules.customRule
       }
@@ -188,13 +227,11 @@ export function AccountCreationForm() {
   })
 
   const onSubmit = async (values: FormData) => {
-    console.log('[AccountCreation] Form submitted:', values);
-    
     try {
       setIsCreating(true)
+      setUserCreationError(null)
 
       // Step 1: Create user
-      console.log('[AccountCreation] Creating user with data:', values.user);
       const userResponse = await createUserMutation.mutateAsync(values.user)
       const userId = userResponse.data.userId
 
@@ -213,19 +250,35 @@ export function AccountCreationForm() {
       form.reset()
       setCurrentStep("user")
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      setUserCreationError(errorMessage);
       toast.error("Failed to create account", {
-        description: error instanceof Error ? error.message : "Unknown error",
+        description: errorMessage,
       })
     } finally {
       setIsCreating(false)
     }
   }
 
-  const nextStep = () => {
+  const nextStep = async () => {
+    // Validate current step before proceeding
+    let isValid = false;
+    
     if (currentStep === "user") {
-      setCurrentStep("account")
+      isValid = await form.trigger("user");
     } else if (currentStep === "account") {
-      setCurrentStep("rules")
+      isValid = await form.trigger("account");
+    }
+    
+    if (isValid) {
+      if (currentStep === "user") {
+        setCurrentStep("account");
+      } else if (currentStep === "account") {
+        setCurrentStep("rules");
+      }
+    } else {
+      // Show validation errors
+      toast.error("Please fix the errors before proceeding");
     }
   }
 
@@ -254,15 +307,17 @@ export function AccountCreationForm() {
                 <TabsTrigger value="account">Account Configuration</TabsTrigger>
                 <TabsTrigger value="rules">Trading Rules</TabsTrigger>
               </TabsList>
-
               <TabsContent value="user" className="space-y-4">
+                <div className="text-sm text-muted-foreground mb-4">
+                  Fields marked with <span className="text-red-500">*</span> are required
+                </div>
                 <div className="grid gap-4 md:grid-cols-2">
                   <FormField
                     control={form.control}
                     name="user.firstName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>First Name</FormLabel>
+                        <FormLabel>First Name <span className="text-red-500">*</span></FormLabel>
                         <FormControl>
                           <Input placeholder="John" {...field} />
                         </FormControl>
@@ -275,7 +330,7 @@ export function AccountCreationForm() {
                     name="user.lastName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Last Name</FormLabel>
+                        <FormLabel>Last Name <span className="text-red-500">*</span></FormLabel>
                         <FormControl>
                           <Input placeholder="Doe" {...field} />
                         </FormControl>
@@ -284,13 +339,12 @@ export function AccountCreationForm() {
                     )}
                   />
                 </div>
-
                 <FormField
                   control={form.control}
                   name="user.email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel>Email <span className="text-red-500">*</span></FormLabel>
                       <FormControl>
                         <Input type="email" placeholder="john.doe@example.com" {...field} />
                       </FormControl>
@@ -298,18 +352,27 @@ export function AccountCreationForm() {
                     </FormItem>
                   )}
                 />
-
                 <div className="grid gap-4 md:grid-cols-2">
                   <FormField
                     control={form.control}
                     name="user.country"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Country</FormLabel>
-                        <FormControl>
-                          <Input placeholder="US" {...field} />
-                        </FormControl>
-                        <FormDescription>2-letter country code</FormDescription>
+                        <FormLabel>Country <span className="text-red-500">*</span></FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a country" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {countries.map((country) => (
+                              <SelectItem key={country.code} value={country.code}>
+                                {country.name} ({country.code})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -319,58 +382,88 @@ export function AccountCreationForm() {
                     name="user.state"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>State (Optional)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="CA" {...field} />
-                        </FormControl>
+                        <FormLabel>
+                          State {form.watch("user.country") === "US" && <span className="text-red-500">*</span>}
+                        </FormLabel>
+                        <Select 
+                          onValueChange={field.onChange} 
+                          defaultValue={field.value}
+                          disabled={form.watch("user.country") !== "US"}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder={form.watch("user.country") === "US" ? "Select a state" : "Only for US"} />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {usStates.map((state) => (
+                              <SelectItem key={state.code} value={state.code}>
+                                {state.name} ({state.code})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 </div>
-
                 <FormField
                   control={form.control}
                   name="user.phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Phone (Optional)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="+1234567890" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Phone (Optional)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="+1234567890" {...field} />
+                        </FormControl>
+                        <FormDescription>International format with country code</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                 />
-
-                <div className="flex justify-end">
+                {userCreationError && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{userCreationError}</AlertDescription>
+                  </Alert>
+                )}
+                <div className="flex justify-end space-x-2">
+                  <Button 
+                    type="button" 
+                    variant="outline"
+                    onClick={() => {
+                      form.reset();
+                      setUserCreationError(null);
+                    }}
+                  >
+                    Reset
+                  </Button>
                   <Button type="button" onClick={nextStep}>
                     Next: Account Configuration
                   </Button>
                 </div>
               </TabsContent>
-
               <TabsContent value="account" className="space-y-4">
                 <FormField
                   control={form.control}
                   name="account.balance"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Starting Balance</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          placeholder="100000"
-                          {...field}
-                          onChange={(e) => field.onChange(Number(e.target.value))}
-                        />
-                      </FormControl>
-                      <FormDescription>Initial account balance in selected currency</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Starting Balance</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="number"
+                            placeholder="100000"
+                            {...field}
+                            onChange={(e) => field.onChange(Number(e.target.value))}
+                          />
+                        </FormControl>
+                        <FormDescription>Initial account balance in selected currency</FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                 />
-
                 <div className="grid gap-4 md:grid-cols-2">
                   <FormField
                     control={form.control}
@@ -396,7 +489,6 @@ export function AccountCreationForm() {
                       </FormItem>
                     )}
                   />
-
                   <FormField
                     control={form.control}
                     name="account.mode"
@@ -427,74 +519,70 @@ export function AccountCreationForm() {
                     )}
                   />
                 </div>
-
                 <FormField
                   control={form.control}
                   name="account.portfolioMode"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Portfolio Mode</FormLabel>
-                      <Select
-                        onValueChange={(value) => field.onChange(Number(value))}
-                        defaultValue={field.value.toString()}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select portfolio mode" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="0">Netting</SelectItem>
-                          <SelectItem value="1">Hedging</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Portfolio Mode</FormLabel>
+                        <Select
+                          onValueChange={(value) => field.onChange(Number(value))}
+                          defaultValue={field.value.toString()}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select portfolio mode" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="0">Netting</SelectItem>
+                            <SelectItem value="1">Hedging</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                 />
-
                 <FormField
                   control={form.control}
                   name="account.header"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Account Name (Optional)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="My Trading Account" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Account Name (Optional)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="My Trading Account" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                 />
-
                 <FormField
                   control={form.control}
                   name="account.expirationMode"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Expiration Mode</FormLabel>
-                      <Select
-                        onValueChange={(value) => field.onChange(Number(value))}
-                        defaultValue={field.value.toString()}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select expiration mode" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="0">Never Expires</SelectItem>
-                          <SelectItem value="1">Use End Date</SelectItem>
-                          <SelectItem value="2">Days From Activation</SelectItem>
-                          <SelectItem value="3">Days From First Order</SelectItem>
-                          <SelectItem value="4">Days From First Execution</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Expiration Mode</FormLabel>
+                        <Select
+                          onValueChange={(value) => field.onChange(Number(value))}
+                          defaultValue={field.value.toString()}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select expiration mode" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="0">Never Expires</SelectItem>
+                            <SelectItem value="1">Use End Date</SelectItem>
+                            <SelectItem value="2">Days From Activation</SelectItem>
+                            <SelectItem value="3">Days From First Order</SelectItem>
+                            <SelectItem value="4">Days From First Execution</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                 />
-
                 {form.watch("account.expirationMode") === ExpirationMode.DaysFromActivation && (
                   <FormField
                     control={form.control}
@@ -516,7 +604,6 @@ export function AccountCreationForm() {
                     )}
                   />
                 )}
-
                 <div className="flex justify-between">
                   <Button type="button" variant="outline" onClick={prevStep}>
                     Previous
@@ -526,7 +613,6 @@ export function AccountCreationForm() {
                   </Button>
                 </div>
               </TabsContent>
-
               <TabsContent value="rules" className="space-y-4">
                 <FormField
                   control={form.control}
@@ -564,7 +650,6 @@ export function AccountCreationForm() {
                     </FormItem>
                   )}
                 />
-
                 {form.watch("tradingRules.ruleType") === "template" && (
                   <FormField
                     control={form.control}
@@ -606,7 +691,6 @@ export function AccountCreationForm() {
                     )}
                   />
                 )}
-
                 {form.watch("tradingRules.ruleType") === "custom" && (
                   <div className="rounded-lg border p-4">
                     <p className="text-sm text-muted-foreground">
@@ -624,7 +708,6 @@ export function AccountCreationForm() {
                     </p>
                   </div>
                 )}
-
                 <div className="flex justify-between">
                   <Button type="button" variant="outline" onClick={prevStep}>
                     Previous
