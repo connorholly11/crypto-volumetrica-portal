@@ -1,98 +1,174 @@
-# Crypto Volumetrica Portal
+# Crypto-Volumetrica Integration Portal
 
-A professional trading portal for prop firm crypto trading management integrated with Volumetrica's platform.
-
-## 🤖 For AI Agents
-**Start here**: [`AI_AGENT_INTRO.md`](./AI_AGENT_INTRO.md)
-
-## 📋 Documentation Structure
-
-### Planning & Architecture
-- [`PROTOTYPE_PLAN.md`](./PROTOTYPE_PLAN.md) - Complete implementation plan
-- [`QUICK_START.md`](./QUICK_START.md) - Quick setup guide
-- [`UI_COMPONENTS_GUIDE.md`](./UI_COMPONENTS_GUIDE.md) - UI component patterns
-
-### Collaboration
-- [`AI_AGENT_INTRO.md`](./AI_AGENT_INTRO.md) - Starting point for AI agents
-- [`AGENT_RULES.md`](./AGENT_RULES.md) - Collaboration guidelines
-- [`AGENT_COLLABORATION.md`](./AGENT_COLLABORATION.md) - Work tracking log
-
-### API Documentation
-- [`volumetrica/platform.md`](./volumetrica/platform.md) - Volumetrica platform API
-- [`volumetrica/trading-api.md`](./volumetrica/trading-api.md) - Trading API (reference only)
+A comprehensive trading platform integration with Volumetrica, providing account management, risk monitoring, and trading rule enforcement for proprietary trading firms.
 
 ## 🚀 Quick Start
 
-1. **Install dependencies**:
 ```bash
+# Clone the repository
+git clone https://github.com/your-org/crypto-volumetrica.git
+cd crypto-volumetrica
+
+# Install dependencies
 npm install
-```
 
-2. **Set up environment** (already configured in `.env.local`)
+# Set up environment variables
+cp .env.example .env.local
+# Edit .env.local with your credentials
 
-3. **Run development server**:
-```bash
+# Set up database
+npx prisma generate
+npx prisma migrate dev
+
+# Run development server
 npm run dev
 ```
 
-4. **Access the portal**:
-- Home: http://localhost:3000
-- Trader Dashboard: http://localhost:3000/trader/[userId]
-- Admin Dashboard: http://localhost:3000/admin
+Open [http://localhost:3000](http://localhost:3000) to see the application.
 
-## 🏗️ Project Status
+## 📚 Documentation
 
-Currently in **Phase 1: Setup & Core Implementation**
+Comprehensive documentation is available in the `/docs/` directory:
 
-See [`AGENT_COLLABORATION.md`](./AGENT_COLLABORATION.md) for current progress and available tasks.
+### Core Documentation
+- **[Documentation Index](./docs/README.md)** - Start here for all documentation
+- **[Architecture Overview](./docs/architecture/overview.md)** - System design and tech stack
+- **[API Reference](./docs/architecture/api-reference.md)** - Endpoint documentation
+- **[Development Setup](./docs/guides/development-setup.md)** - Get started quickly
 
-## 🛠️ Tech Stack
+### Quick Links
+- [Business Logic](./docs/business/business-logic.md)
+- [Testing Guide](./docs/guides/testing.md)
+- [Deployment Guide](./docs/guides/deployment.md)
+- [Troubleshooting](./docs/guides/troubleshooting.md)
 
-- **Frontend**: Next.js 15.4.4 with TypeScript
+## 🏗️ Tech Stack
+
+- **Framework**: Next.js 15 with App Router
+- **Language**: TypeScript
+- **Database**: PostgreSQL with Prisma ORM
+- **Authentication**: Clerk
 - **Styling**: Tailwind CSS + shadcn/ui
-- **API**: Next.js API Routes
 - **State Management**: React Query
-- **Forms**: React Hook Form + Zod
-- **Charts**: Recharts
-- **Tables**: TanStack Table
+- **External API**: Volumetrica Trading Platform
+- **Monitoring**: Sentry
+- **Rate Limiting**: Upstash Redis
+
+## 🔑 Key Features
+
+### For Traders
+- Real-time account dashboard
+- Performance metrics and charts
+- Risk monitoring (drawdown, P&L)
+- Trading rule visibility
+- Automatic position management
+
+### For Administrators
+- User management system
+- Account creation wizard
+- Trading rule configuration
+- Platform-wide analytics
+- Audit logging
 
 ## 📁 Project Structure
 
 ```
 crypto-vol-integration/
 ├── src/
-│   ├── app/             # Next.js pages and API routes
-│   ├── components/      # React components
-│   ├── lib/            # Utilities and API client
-│   └── types/          # TypeScript definitions
-├── public/             # Static assets
-├── volumetrica/        # API documentation
-└── [documentation]     # Project docs
+│   ├── app/                      # Next.js App Router pages and API routes
+│   │   ├── admin/               # Admin dashboard pages
+│   │   ├── api/                 # API route handlers
+│   │   ├── trader/              # Trader dashboard pages
+│   │   └── (auth)/              # Authentication pages
+│   ├── components/              # React components
+│   │   ├── admin/              # Admin-specific components
+│   │   ├── trader/             # Trader-specific components
+│   │   └── ui/                 # Shared UI components (shadcn/ui)
+│   ├── hooks/                   # Custom React hooks
+│   ├── lib/                     # Utilities and services
+│   │   └── volumetrica/        # Volumetrica API client
+│   └── types/                   # TypeScript type definitions
+├── prisma/                      # Database schema and migrations
+├── public/                      # Static assets
+├── tests/                       # Test suites
+├── volumetrica/                 # API documentation
+└── rules-docs-agents/           # Comprehensive documentation
 ```
 
-## 🔗 Key Features
+## 🛠️ Development
 
-### Trader Dashboard
-- Real-time account balance and equity
-- P&L tracking with visual indicators
-- Drawdown monitoring with risk alerts
-- Trading rules display
-- Performance metrics and charts
+### Prerequisites
+- Node.js 18+ 
+- PostgreSQL 14+
+- npm or yarn
+- Clerk account
+- Volumetrica API access
 
-### Admin Dashboard  
-- Quick account creation workflow
-- User management system
-- Trading rules templates
-- Account monitoring table
-- Enable/disable accounts
+### Common Commands
+
+```bash
+# Development
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run start        # Start production server
+
+# Database
+npm run db:migrate   # Run migrations
+npm run db:studio    # Open Prisma Studio
+npm run db:seed      # Seed test data
+
+# Testing
+npm test            # Run all tests
+npm run test:unit   # Unit tests only
+npm run test:e2e    # E2E tests only
+
+# Code Quality
+npm run lint        # Run ESLint
+npm run type-check  # TypeScript checking
+npm run format      # Format with Prettier
+```
+
+## 🚀 Deployment
+
+The application can be deployed to:
+
+- **Vercel** (Recommended): One-click deployment with automatic CI/CD
+- **AWS**: Using Docker containers with ECS/EKS
+- **Self-hosted**: Using Docker Compose
+
+See the [deployment guide](./rules-docs-agents/codebase-documentation/06-DEPLOYMENT-PRODUCTION.md) for detailed instructions.
+
+## 🔒 Security
+
+- All API routes are protected with authentication
+- Rate limiting prevents abuse (10 requests/10 seconds)
+- Input validation on all endpoints
+- Encrypted data transmission
+- Regular security audits
 
 ## 🤝 Contributing
 
-This project uses AI agents for development. See:
-- [`AI_AGENT_INTRO.md`](./AI_AGENT_INTRO.md) for getting started
-- [`AGENT_RULES.md`](./AGENT_RULES.md) for collaboration rules
-- [`AGENT_COLLABORATION.md`](./AGENT_COLLABORATION.md) for current status
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### For AI Agents
+This project supports AI-assisted development. See:
+- [AI Agent Introduction](./AI_AGENT_INTRO.md) for getting started
+- [Agent Rules](./AGENT_RULES.md) for collaboration guidelines
+
+## 📄 License
+
+This project is proprietary software. All rights reserved.
+
+## 🆘 Support
+
+- Documentation: `/rules-docs-agents/codebase-documentation`
+- Issues: GitHub Issues
+- Security: security@your-org.com
 
 ---
 
-Built for [Prop Firm Name] in partnership with Volumetrica
+Built for proprietary trading firms in partnership with Volumetrica
