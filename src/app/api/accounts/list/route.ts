@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getVolumetricaClient } from '@/lib/volumetrica/client';
 import { VolumetricaError } from '@/lib/volumetrica/client';
 import { TradingAccount, AccountStatus } from '@/types/volumetrica';
+import { requireAuth } from '@/lib/auth';
 
 // Validation schema for query parameters
 const ListAccountsSchema = z.object({
@@ -18,6 +19,9 @@ export async function GET(request: NextRequest) {
   console.log('[Accounts List] Request received');
   
   try {
+    // Check authentication
+    const userId = requireAuth();
+    console.log('[Accounts List] Authenticated user:', userId);
     // Parse query parameters
     const searchParams = request.nextUrl.searchParams;
     const queryParams = {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getVolumetricaClient } from '@/lib/volumetrica/client';
 import type { TradingRule, RiskParameter, RiskAction, RiskValueSelection, RiskAnchor } from '@/types/volumetrica';
 import { z } from 'zod';
+import { requireAuth } from '@/lib/auth';
 
 // Risk parameter validation schema
 const riskParameterSchema = z.object({
@@ -47,6 +48,10 @@ const createTradingRuleSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    // Check authentication
+    const userId = requireAuth();
+    console.log('[Trading Rules Create] Authenticated user:', userId);
+    
     // Parse request body
     const body = await request.json();
 

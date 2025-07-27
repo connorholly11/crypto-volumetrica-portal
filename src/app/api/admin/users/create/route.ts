@@ -132,6 +132,8 @@ export async function POST(request: NextRequest) {
       });
       
       // Return successful response with rate limit headers
+      // SECURITY: Never return passwords in API responses
+      // TODO: Implement secure password delivery (email, SMS, or admin UI)
       return NextResponse.json({
         success: true,
         data: {
@@ -141,9 +143,9 @@ export async function POST(request: NextRequest) {
           email,
           firstName,
           lastName,
-          tempPassword, // Return temporary password for admin to share with user
+          // Password removed for security - implement secure delivery method
         },
-        message: 'User created successfully in all systems'
+        message: 'User created successfully. Temporary password must be communicated securely.'
       }, { 
         status: 201,
         headers 

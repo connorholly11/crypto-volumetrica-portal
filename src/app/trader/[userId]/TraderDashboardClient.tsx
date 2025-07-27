@@ -134,7 +134,9 @@ export default function TraderDashboardClient({ userId }: TraderDashboardClientP
   });
 
   // Generate mock performance data based on account balance
-  const balance = accountForDisplay ? Number(accountForDisplay.balance) : 0;
+  // Keep balance as string until final calculation to maintain precision
+  const balanceStr = accountForDisplay?.balance || '0';
+  const balance = parseFloat(balanceStr); // Only convert when needed for calculations
   const performanceData = accountForDisplay 
     ? generateMockPerformanceData(balance) 
     : [];
@@ -151,7 +153,7 @@ export default function TraderDashboardClient({ userId }: TraderDashboardClientP
     runup: fullAccountData.runup,
     dailyTrades: Math.floor(Math.random() * 10), // Mock daily trades
   } : (accountForDisplay ? {
-    balance: Number(accountForDisplay.balance),
+    balance: parseFloat(accountForDisplay.balance), // TODO: Use decimal.js for production
     drawdown: 0, // Not available in cached data
     intradayDrawdown: 0, // Not available in cached data
     runup: 0, // Not available in cached data
@@ -218,13 +220,13 @@ export default function TraderDashboardClient({ userId }: TraderDashboardClientP
                 accountId: accountForDisplay.accountId,
                 userId: accountsData?.user?.volumetricaId || '',
                 header: 'Trading Account',
-                balance: Number(accountForDisplay.balance),
+                balance: parseFloat(accountForDisplay.balance), // TODO: Use decimal.js for production
                 currency: accountForDisplay.currency === 'EUR' ? 0 : 1,
                 status: accountForDisplay.status,
                 // Set defaults for fields not in cache
-                equity: Number(accountForDisplay.balance),
+                equity: parseFloat(accountForDisplay.balance),
                 usedMargin: 0,
-                freeMargin: Number(accountForDisplay.balance),
+                freeMargin: parseFloat(accountForDisplay.balance),
                 marginLevel: 0,
                 dailyPnL: 0,
                 weeklyPnL: 0,

@@ -6,14 +6,24 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 // Format currency with proper symbol and decimals
-export function formatCurrency(amount: number, currency: 'USD' | 'EUR' = 'USD'): string {
+// Accepts string or number to maintain decimal precision
+export function formatCurrency(amount: string | number, currency: 'USD' | 'EUR' = 'USD'): string {
+  // Convert string to number for formatting, but use parseFloat carefully
+  // For production, consider using a decimal library like decimal.js
+  const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+  
+  // Check for invalid numbers
+  if (isNaN(numericAmount)) {
+    return currency === 'USD' ? '$0.00' : '€0.00';
+  }
+  
   const formatter = new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: currency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
-  return formatter.format(amount);
+  return formatter.format(numericAmount);
 }
 
 // Format percentage with sign

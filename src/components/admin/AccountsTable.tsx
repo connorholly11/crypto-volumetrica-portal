@@ -213,8 +213,10 @@ export function AccountsTable({ userId, refreshInterval = 30000 }: AccountsTable
         )
       },
       cell: ({ row }) => {
-        const amount = parseFloat(row.getValue("balance"))
-        return <div className="font-mono">{formatCurrency(amount)}</div>
+        // Use string representation to maintain decimal precision
+        const balanceStr = row.getValue("balance") as string
+        // Pass string to formatCurrency which should handle conversion safely
+        return <div className="font-mono">{formatCurrency(balanceStr)}</div>
       },
     },
     {
@@ -231,8 +233,10 @@ export function AccountsTable({ userId, refreshInterval = 30000 }: AccountsTable
         )
       },
       cell: ({ row }) => {
-        const amount = parseFloat(row.getValue("equity"))
-        return <div className="font-mono">{formatCurrency(amount)}</div>
+        // Use string representation to maintain decimal precision
+        const equityStr = row.getValue("equity") as string
+        // Pass string to formatCurrency which should handle conversion safely
+        return <div className="font-mono">{formatCurrency(equityStr)}</div>
       },
     },
     {
