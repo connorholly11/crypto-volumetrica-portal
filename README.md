@@ -155,9 +155,9 @@ See the [deployment guide](./rules-docs-agents/codebase-documentation/06-DEPLOYM
 5. Open a Pull Request
 
 ### For AI Agents
-This project supports AI-assisted development. See:
-- [AI Agent Introduction](./AI_AGENT_INTRO.md) for getting started
-- [Agent Rules](./AGENT_RULES.md) for collaboration guidelines
+This project supports AI-assisted development.
+- **🚀 [START HERE](./AI_START_HERE.md)** - All AI agents should begin here
+- [Detailed Documentation](./docs/ai-development/) for collaboration guidelines
 
 ## 📄 License
 
