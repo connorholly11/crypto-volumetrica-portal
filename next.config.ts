@@ -4,11 +4,6 @@ import { withSentryConfig } from "@sentry/nextjs";
 const nextConfig: NextConfig = {
   /* config options here */
   
-  // Enable instrumentation hook for Sentry
-  experimental: {
-    instrumentationHook: true,
-  },
-  
   // Suppress source map uploading logs during build
   productionBrowserSourceMaps: false,
 };

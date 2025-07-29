@@ -51,8 +51,7 @@ export const initSentry = () => {
     tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
     environment: process.env.NODE_ENV || 'development',
     integrations: [
-      // Automatically instrument API routes
-      Sentry.nativeNodeFetchIntegration(),
+      // Default integrations will be included automatically
     ],
     beforeSend(event, hint) {
       // Filter out certain errors if needed
