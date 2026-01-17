@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { volumetricaApi } from '@/lib/volumetrica/client';
 import { VolumetricaError } from '@/lib/volumetrica/client';
+import { withErrorCapture } from '@/lib/sentry';
 import { z } from 'zod';
 import type { CreateUserRequest, CreateUserResponse, UserManagementMode, EncryptionMode } from '@/types/volumetrica';
 
@@ -27,7 +28,7 @@ const createUserSchema = z.object({
   externalId: z.string().max(100, 'External ID too long').optional(),
 });
 
-export async function POST(request: NextRequest) {
+export const POST = withErrorCapture(async (request: NextRequest) => {
   console.log('[User Create] Request received');
   
   try {
@@ -129,4 +130,4 @@ export async function POST(request: NextRequest) {
       details: errorDetails.length > 0 ? errorDetails : ['An unexpected error occurred while creating the user']
     }, { status: 500 });
   }
-}
+});

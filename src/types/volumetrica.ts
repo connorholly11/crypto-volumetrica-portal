@@ -106,6 +106,7 @@ export interface TradingAccount {
   enabledAt?: string;
   expirationDate?: string;
   reason?: DisableReason;
+  sequenceId?: string;
 }
 
 export enum Currency {

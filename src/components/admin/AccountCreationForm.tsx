@@ -31,7 +31,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, CheckCircle, Copy } from "lucide-react"
 import { countries } from "@/lib/data/countries"
 import { usStates } from "@/lib/data/us-states"
 
@@ -51,10 +51,6 @@ const userSchema = z.object({
   country: z.string().length(2, "Please select a country"),
   state: z.union([
     z.string().length(2),
-    z.literal("")
-  ]).optional(),
-  phone: z.union([
-    z.string().regex(/^\+?[1-9]\d{1,14}$/, "Invalid phone number format (e.g., +1234567890)"),
     z.literal("")
   ]).optional(),
 }).refine(
@@ -110,6 +106,11 @@ export function AccountCreationForm() {
   const [currentStep, setCurrentStep] = useState("user")
   const [isCreating, setIsCreating] = useState(false)
   const [userCreationError, setUserCreationError] = useState<string | null>(null)
+  const [createdUserInfo, setCreatedUserInfo] = useState<{
+    email: string
+    tempPassword: string
+    userId: string
+  } | null>(null)
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -120,7 +121,6 @@ export function AccountCreationForm() {
         email: "",
         country: "",
         state: "",
-        phone: "",
       },
       account: {
         balance: 100000,
@@ -160,10 +160,10 @@ export function AccountCreationForm() {
     },
   })
 
-  // Create user mutation
+  // Create user mutation - now uses the admin API route
   const createUserMutation = useMutation({
     mutationFn: async (userData: z.infer<typeof userSchema>) => {
-      const response = await fetch("/api/users/create", {
+      const response = await fetch("/api/admin/users/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(userData),
@@ -231,9 +231,22 @@ export function AccountCreationForm() {
       setIsCreating(true)
       setUserCreationError(null)
 
-      // Step 1: Create user
+      // Step 1: Create user in Clerk, Volumetrica, and database
       const userResponse = await createUserMutation.mutateAsync(values.user)
-      const userId = userResponse.data.userId
+      
+      // Check if user creation was successful
+      if (!userResponse.success) {
+        throw new Error(userResponse.message || "Failed to create user")
+      }
+      
+      const { userId, tempPassword, email } = userResponse.data
+      
+      // Store the created user info for display
+      setCreatedUserInfo({
+        email,
+        tempPassword,
+        userId
+      })
 
       // Step 2: Create account with trading rules
       const accountResponse = await createAccountMutation.mutateAsync({
@@ -246,9 +259,7 @@ export function AccountCreationForm() {
         description: `Account ID: ${accountResponse.data.accountId}`,
       })
 
-      // Reset form
-      form.reset()
-      setCurrentStep("user")
+      // Don't reset form immediately - let admin see the temporary password
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       setUserCreationError(errorMessage);
@@ -299,6 +310,52 @@ export function AccountCreationForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {/* Display temporary password after successful creation */}
+        {createdUserInfo && (
+          <Alert className="mb-6 border-green-200 bg-green-50">
+            <CheckCircle className="h-4 w-4 text-green-600" />
+            <AlertDescription className="space-y-2">
+              <p className="font-semibold text-green-800">User created successfully!</p>
+              <div className="space-y-1 text-sm">
+                <p><span className="font-medium">Email:</span> {createdUserInfo.email}</p>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">Temporary Password:</span>
+                  <code className="bg-green-100 px-2 py-1 rounded text-green-900 font-mono">
+                    {createdUserInfo.tempPassword}
+                  </code>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      navigator.clipboard.writeText(createdUserInfo.tempPassword)
+                      toast.success("Password copied to clipboard")
+                    }}
+                  >
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+              <p className="text-xs text-green-700 mt-2">
+                Please share this temporary password with the user. They will be prompted to change it on first login.
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="mt-2"
+                onClick={() => {
+                  form.reset()
+                  setCurrentStep("user")
+                  setCreatedUserInfo(null)
+                  setUserCreationError(null)
+                }}
+              >
+                Create Another Account
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <Tabs value={currentStep} onValueChange={setCurrentStep}>
@@ -408,20 +465,6 @@ export function AccountCreationForm() {
                     )}
                   />
                 </div>
-                <FormField
-                  control={form.control}
-                  name="user.phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone (Optional)</FormLabel>
-                        <FormControl>
-                          <Input placeholder="+1234567890" {...field} />
-                        </FormControl>
-                        <FormDescription>International format with country code</FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                />
                 {userCreationError && (
                   <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />

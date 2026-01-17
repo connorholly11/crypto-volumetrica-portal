@@ -3,6 +3,7 @@ import { volumetricaApi } from '@/lib/volumetrica/client';
 import { VolumetricaError } from '@/lib/volumetrica/client';
 import { z } from 'zod';
 import type { LoginUrlRequest, LoginUrlResponse } from '@/types/volumetrica';
+import { requireAuth } from '@/lib/auth';
 
 // Validation schema for login URL request
 const loginUrlSchema = z.object({
@@ -11,6 +12,10 @@ const loginUrlSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    // Check authentication
+    const userId = requireAuth();
+    console.log('[Login URL] Authenticated user:', userId);
+    
     // Parse request body
     const body = await request.json();
     
